@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1064868524856",
+    "project_id": "trochoi-95b1c",
+    "storage_bucket": "trochoi-95b1c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1064868524856:android:35b2d3b8bc7f808d2647cd",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsXsNPSDxRGtQompIiPsSF3wbnMy6gC9E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

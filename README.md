@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # flutter_application_1
 
 A new Flutter project.
@@ -18,3 +19,8 @@ samples, guidance on mobile development, and a full API reference.
 =======
 # Flutter_CasinoGame
 >>>>>>> 76e05c124cfadcdf4d12b73b263ba037f9a2062d
+=======
+# Flutter Casino Game
+
+Ứng dụng game Flutter: Xóc Đĩa, Tài Xỉu, Higher Lower
+>>>>>>> 7e5f2ada17f3074540ce4ad655a826099888bbb8

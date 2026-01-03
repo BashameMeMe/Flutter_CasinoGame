@@ -60,14 +60,6 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
-    - lib/BaiTap/BaiTap2/p1.png
-    - lib/BaiTap/BaiTap2/p2.png
-    - lib/BaiTap/BaiTap2/p3.png
-    - lib/BaiTap/BaiTap2/p4.png
-    - lib/BaiTap/BaiTap3/baitap3-p1.png
-    - lib/BaiTap/BaiTap3/baitap3-p2.png
-    - lib/BaiTap/BaiTap3/baitap3-p3.png
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

@@ -5,7 +5,6 @@ import 'package:flutter_application_1/screens/home/home_screen.dart';
 import 'firebase_options.dart';
 
 import 'screens/auth/login_screen.dart';
-import 'screens/auth/resgister_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -6,8 +6,7 @@ class HigherLowerCardScreen extends StatefulWidget {
   const HigherLowerCardScreen({super.key});
 
   @override
-  State<HigherLowerCardScreen> createState() =>
-      _HigherLowerCardScreenState();
+  State<HigherLowerCardScreen> createState() => _HigherLowerCardScreenState();
 }
 
 class _HigherLowerCardScreenState extends State<HigherLowerCardScreen> {
@@ -19,12 +18,7 @@ class _HigherLowerCardScreenState extends State<HigherLowerCardScreen> {
   bool playing = false;
 
   String cardLabel(int value) {
-    const labels = {
-      1: 'A',
-      11: 'J',
-      12: 'Q',
-      13: 'K',
-    };
+    const labels = {1: 'A', 11: 'J', 12: 'Q', 13: 'K'};
     return labels[value] ?? value.toString();
   }
 
@@ -87,42 +81,96 @@ class _HigherLowerCardScreenState extends State<HigherLowerCardScreen> {
   }
 
   Widget buildCard() {
+    final isRed = currentCard == 1 || currentCard == 11 || currentCard == 12 || currentCard == 13;
+    final suit = isRed ? '♥' : '♠';
+
     return Container(
-      width: 140,
-      height: 200,
+      width: 160,
+      height: 220,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.amber[700]!, width: 4),
+        boxShadow: [
           BoxShadow(
-            blurRadius: 15,
-            color: Colors.black26,
-            offset: Offset(0, 8),
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 20,
+            spreadRadius: 5,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      alignment: Alignment.center,
-      child: Text(
-        cardLabel(currentCard),
-        style: const TextStyle(
-          fontSize: 56,
-          fontWeight: FontWeight.bold,
-        ),
+      child: Stack(
+        children: [
+          Center(
+            child: Text(
+              cardLabel(currentCard),
+              style: TextStyle(
+                fontSize: 80,
+                fontWeight: FontWeight.bold,
+                color: isRed ? Colors.red[800] : Colors.black87,
+                shadows: const [Shadow(blurRadius: 10, color: Colors.black45)],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            left: 12,
+            child: Text(
+              suit,
+              style: TextStyle(fontSize: 36, color: isRed ? Colors.red : Colors.black, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Positioned(
+            bottom: 12,
+            right: 12,
+            child: Transform.rotate(
+              angle: 3.14159,
+              child: Text(
+                suit,
+                style: TextStyle(fontSize: 36, color: isRed ? Colors.red : Colors.black, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget infoBox(String title, String value) {
-    return Column(
-      children: [
-        Text(title,
-            style: const TextStyle(color: Colors.white70)),
-        const SizedBox(height: 4),
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold)),
-      ],
+  Widget infoBox(String title, String value, {Color color = Colors.white}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(title, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          const SizedBox(height: 4),
+          Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget betButton(int amount) {
+    return GestureDetector(
+      onTap: playing ? null : () => startGame(amount),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.amber[700],
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(color: Colors.amber.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 6)),
+          ],
+        ),
+        child: Text(
+          "$amount",
+          style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
     );
   }
 
@@ -131,89 +179,113 @@ class _HigherLowerCardScreenState extends State<HigherLowerCardScreen> {
     final potential = (bet * multiplier).round();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Higher / Lower Cards")),
+      appBar: AppBar(
+        title: const Text("HIGHER / LOWER", style: TextStyle(letterSpacing: 1.5)),
+        backgroundColor: Colors.black.withOpacity(0.3), // Nền mờ để hòa quyện
+        elevation: 0,
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF1B1F3B), Color(0xFF0F1021)],
+            colors: [Color(0xFF0F2027), Color(0xFF1B263B), Color(0xFF415A77)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
                 children: [
-                  infoBox("TIỀN GỐC", "$bet"),
-                  infoBox("HỆ SỐ", "x${multiplier.toStringAsFixed(2)}"),
-                  infoBox("TẠM TÍNH", "$potential"),
-                ],
-              ),
+                  const SizedBox(height: 10),
 
-              const SizedBox(height: 30),
-              buildCard(),
-              const SizedBox(height: 30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      infoBox("TIỀN GỐC", "$bet coin", color: Colors.amber[300]!),
+                      infoBox("HỆ SỐ", "x${multiplier.toStringAsFixed(2)}", color: Colors.green[300]!),
+                      infoBox("TẠM TÍNH", "$potential coin", color: Colors.cyan[300]!),
+                    ],
+                  ),
 
-              if (!playing)
-                Wrap(
-                  spacing: 10,
-                  children: [100, 200, 500, 1000]
-                      .map(
-                        (e) => ElevatedButton(
-                          onPressed: () => startGame(e),
-                          child: Text("Cược $e"),
-                        ),
-                      )
-                      .toList(),
-                ),
+                  const SizedBox(height: 40),
 
-              if (playing) ...[
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => guess(false),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 30, vertical: 14),
-                      ),
-                      child: const Text("LOWER"),
+                  buildCard(),
+
+                  const SizedBox(height: 40),
+
+                  if (!playing)
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      alignment: WrapAlignment.center,
+                      children: [100, 200, 500, 1000].map(betButton).toList(),
                     ),
+
+                  if (playing) ...[
+                    const SizedBox(height: 30),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => guess(false),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red[700],
+                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            elevation: 8,
+                          ),
+                          child: const Text(
+                            "LOWER",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => guess(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green[700],
+                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            elevation: 8,
+                          ),
+                          child: const Text(
+                            "HIGHER",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 30),
+
                     ElevatedButton(
-                      onPressed: () => guess(true),
+                      onPressed: cashOut,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 30, vertical: 14),
+                        backgroundColor: Colors.transparent,
+                        elevation: 10,
+                        shadowColor: Colors.amber.withOpacity(0.6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        padding: EdgeInsets.zero,
                       ),
-                      child: const Text("HIGHER"),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFC107), Color(0xFFFFA000)],
+                          ),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Text(
+                          "💰 CASH OUT",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                      ),
                     ),
                   ],
-                ),
-
-                const SizedBox(height: 20),
-
-                ElevatedButton(
-                  onPressed: cashOut,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 40, vertical: 14),
-                  ),
-                  child: const Text(
-                    "💰 KẾT THÚC – CASH OUT",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),

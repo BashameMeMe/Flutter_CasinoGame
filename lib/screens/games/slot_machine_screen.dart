@@ -12,7 +12,7 @@ class SlotMachineScreen extends StatefulWidget {
 class _SlotMachineScreenState extends State<SlotMachineScreen>
     with SingleTickerProviderStateMixin {
   final Random _random = Random();
-  final List<String> symbols = ['🍒', '🍋', '🍊', '🔔', '⭐', '💎', '7️⃣', '🍉', 'BAR'];
+  final List<String> symbols = ['🍒', '🍋', '🍊', '🔔', '⭐', '💎', '7️⃣', '🍉', '💥'];
   List<String> reels = ['🍒', '🍒', '🍒'];
   bool spinning = false;
   int bet = 100;
@@ -27,17 +27,17 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
     super.initState();
     _spinController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 2200),
     );
 
     _spinAnim1 = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _spinController, curve: const Interval(0.0, 1.0, curve: Curves.easeOutCubic)),
     );
     _spinAnim2 = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _spinController, curve: const Interval(0.1, 1.0, curve: Curves.easeOutCubic)),
+      CurvedAnimation(parent: _spinController, curve: const Interval(0.15, 1.0, curve: Curves.easeOutCubic)),
     );
     _spinAnim3 = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _spinController, curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic)),
+      CurvedAnimation(parent: _spinController, curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic)),
     );
   }
 
@@ -47,48 +47,42 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
     super.dispose();
   }
 
+  // ── Spin logic giữ nguyên, chỉ tối ưu thời gian một chút ──
   Future<void> spin() async {
     final ok = await WalletService.deductPoint(bet);
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("❌ Không đủ coin!", style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.redAccent.shade700,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
+        const SnackBar(content: Text("❌ Không đủ coin!"), backgroundColor: Colors.redAccent),
       );
       return;
     }
 
     setState(() => spinning = true);
-
     _spinController.forward(from: 0.0);
 
-    // Hiệu ứng quay nhanh trước khi dừng dần
-    for (int i = 0; i < 25; i++) {
+    // Quay nhanh ban đầu
+    for (int i = 0; i < 28; i++) {
       if (!mounted) return;
-      await Future.delayed(const Duration(milliseconds: 70));
+      await Future.delayed(const Duration(milliseconds: 65));
       setState(() {
         reels = List.generate(3, (_) => symbols[_random.nextInt(symbols.length)]);
       });
     }
 
-    // Dừng từng cuộn một cách đẹp mắt
-    await Future.delayed(const Duration(milliseconds: 400));
+    // Dừng dần từng reel
+    await Future.delayed(const Duration(milliseconds: 500));
     setState(() => reels[0] = symbols[_random.nextInt(symbols.length)]);
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 400));
     setState(() => reels[1] = symbols[_random.nextInt(symbols.length)]);
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 400));
     setState(() {
       reels[2] = symbols[_random.nextInt(symbols.length)];
       spinning = false;
     });
 
     _spinController.reset();
-
     checkResult();
   }
 
@@ -96,7 +90,6 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
     int reward = 0;
 
     if (reels[0] == reels[1] && reels[1] == reels[2]) {
-      // Jackpot
       if (reels[0] == '💎') reward = bet * 25;
       else if (reels[0] == '7️⃣') reward = bet * 15;
       else reward = bet * 10;
@@ -104,48 +97,34 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
       reward = bet * 2;
     }
 
-    if (reward > 0) {
-      await WalletService.addPoint(reward);
-    }
+    if (reward > 0) await WalletService.addPoint(reward);
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        duration: const Duration(seconds: 5),
+        duration: const Duration(seconds: 4),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: Colors.transparent,
+        elevation: 0,
         content: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: reward > 0
-                  ? [Colors.green.shade600, Colors.green.shade900]
+                  ? [Colors.green.shade700, Colors.green.shade900]
                   : [Colors.red.shade700, Colors.red.shade900],
             ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: (reward > 0 ? Colors.green : Colors.red).withOpacity(0.7),
-                blurRadius: 25,
-                spreadRadius: 5,
-              ),
-            ],
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                reward > 0 ? "🎰 JACKPOT! +$reward" : "😔 Thua rồi!",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
+          child: Text(
+            reward > 0 ? "🎉 +$reward coin!" : "😔 Thua rồi...",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
       ),
@@ -155,39 +134,29 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
   Widget reel(String symbol, Animation<double> animation) {
     return AnimatedBuilder(
       animation: animation,
-      builder: (context, child) {
+      builder: (context, _) {
         return Transform.translate(
-          offset: Offset(0, animation.value * 300 - 300), // Cuộn từ trên xuống
+          offset: Offset(0, animation.value * 400 - 400),
           child: Container(
             width: 110,
-            height: 160,
+            height: 150,
             margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.black.withOpacity(0.85), Colors.grey.shade900],
-              ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.amber.shade600, width: 4),
+              color: Colors.grey.shade900,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.amber.shade700, width: 3),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.amber.withOpacity(0.4),
-                  blurRadius: 25,
-                  spreadRadius: 5,
+                  color: Colors.amber.withOpacity(0.35),
+                  blurRadius: 20,
+                  spreadRadius: 2,
                 ),
               ],
             ),
             child: Center(
               child: Text(
                 symbol,
-                style: const TextStyle(
-                  fontSize: 80,
-                  fontWeight: FontWeight.w900,
-                  shadows: [
-                    Shadow(blurRadius: 15, color: Colors.black87),
-                  ],
-                ),
+                style: const TextStyle(fontSize: 78, fontWeight: FontWeight.w900),
               ),
             ),
           ),
@@ -201,31 +170,23 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
     return GestureDetector(
       onTap: spinning ? null : () => setState(() => bet = amount),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: selected
-                ? [Colors.amber.shade500, Colors.orange.shade700]
-                : [Colors.grey.shade800, Colors.grey.shade900],
+                ? [Colors.amber.shade600, Colors.orange.shade800]
+                : [Colors.grey.shade800, Colors.grey],
           ),
-          borderRadius: BorderRadius.circular(40),
-          boxShadow: [
-            BoxShadow(
-              color: selected ? Colors.amber.withOpacity(0.6) : Colors.black.withOpacity(0.4),
-              blurRadius: 16,
-              spreadRadius: 3,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(30),
           border: selected ? Border.all(color: Colors.amberAccent, width: 2) : null,
         ),
         child: Text(
           "$amount",
           style: TextStyle(
-            color: selected ? Colors.black87 : Colors.white70,
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
+            color: selected ? Colors.black : Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -234,157 +195,128 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final reelSize = (screenWidth - 80).clamp(280.0, 360.0); // responsive width
+
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: const Color(0xFF0A0E1A),
+      backgroundColor: const Color(0xFF0C1221),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Colors.amberAccent, Colors.orangeAccent, Colors.deepOrangeAccent],
-          ).createShader(bounds),
-          child: const Text(
-            "SLOT MACHINE VIP",
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              letterSpacing: 4,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70),
-          onPressed: () => Navigator.pop(context),
-        ),
+        title: const Text("🎰 Slot VIP", style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
       ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0A0E1A),
-              Color(0xFF141A2E),
-              Color(0xFF1E2640),
-              Color(0xFF2A1B4A),
-            ],
+            colors: [Color(0xFF0C1221), Color(0xFF1A2340), Color(0xFF2A1B45)],
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
 
-                // Title with glow
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Colors.amberAccent, Colors.orangeAccent],
-                  ).createShader(bounds),
-                  child: const Text(
-                    "🎰 SLOT MACHINE",
-                    style: TextStyle(
-                      fontSize: 38,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 4,
-                      color: Colors.white,
-                      shadows: [Shadow(blurRadius: 15, color: Colors.black87)],
+              // Reels - chiếm phần lớn màn hình
+              Expanded(
+                child: Center(
+                  child: Container(
+                    constraints: BoxConstraints(maxWidth: reelSize + 60),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.65),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.amber.shade700, width: 4),
+                      boxShadow: [
+                        BoxShadow(color: Colors.amber.withOpacity(0.3), blurRadius: 30),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        reel(reels[0], _spinAnim1),
+                        reel(reels[1], _spinAnim2),
+                        reel(reels[2], _spinAnim3),
+                      ],
                     ),
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 50),
-
-                // Reels container
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.black.withOpacity(0.9), Colors.grey.shade900.withOpacity(0.8)],
+              // Bet selection
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  children: [
+                    const Text(
+                      "Chọn mức cược",
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
                     ),
-                    borderRadius: BorderRadius.circular(40),
-                    border: Border.all(color: Colors.amber.shade700, width: 6),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.amber.withOpacity(0.4),
-                        blurRadius: 40,
-                        spreadRadius: 15,
+                    const SizedBox(height: 12),
+                    if (!spinning)
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: [100, 200, 500, 1000, 2000].map(betChip).toList(),
+                      )
+                    else
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Text(
+                          "ĐANG QUAY... 🎰",
+                          style: TextStyle(
+                            color: Colors.amberAccent,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      reel(reels[0], _spinAnim1),
-                      reel(reels[1], _spinAnim2),
-                      reel(reels[2], _spinAnim3),
-                    ],
-                  ),
+                  ],
                 ),
+              ),
 
-                const SizedBox(height: 60),
-
-                // Bet selection
-                if (!spinning)
-                  Wrap(
-                    spacing: 20,
-                    runSpacing: 20,
-                    alignment: WrapAlignment.center,
-                    children: [100, 200, 500, 1000].map(betChip).toList(),
-                  ),
-
-                if (spinning)
-                  const Text(
-                    "ĐANG QUAY... CHỜ JACKPOT! 🎰",
-                    style: TextStyle(
-                      color: Colors.amberAccent,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 2,
-                      shadows: [Shadow(blurRadius: 10, color: Colors.black87)],
-                    ),
-                  ),
-
-                const SizedBox(height: 50),
-
-                // Spin Button
-                GestureDetector(
+              // Spin Button - to & nổi bật
+              Padding(
+                padding: const EdgeInsets.fromLTRB(32, 8, 32, 32),
+                child: GestureDetector(
                   onTap: spinning ? null : spin,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 90, vertical: 24),
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 22),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.red.shade600, Colors.red.shade900],
+                        colors: spinning
+                            ? [Colors.grey.shade800, Colors.grey.shade900]
+                            : [Colors.red.shade700, Colors.red.shade900],
                       ),
                       borderRadius: BorderRadius.circular(60),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.redAccent.withOpacity(0.7),
-                          blurRadius: 30,
-                          spreadRadius: 10,
+                          color: (spinning ? Colors.grey : Colors.redAccent).withOpacity(0.6),
+                          blurRadius: 20,
+                          spreadRadius: 4,
                         ),
                       ],
-                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
                     ),
-                    child: Text(
-                      spinning ? "QUAY..." : "SPIN NOW!",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 5,
-                        shadows: [Shadow(blurRadius: 10, color: Colors.black87)],
+                    child: Center(
+                      child: Text(
+                        spinning ? "ĐANG QUAY..." : "SPIN NOW!",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 3,
+                        ),
                       ),
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 60),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

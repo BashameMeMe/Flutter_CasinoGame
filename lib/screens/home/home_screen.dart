@@ -43,9 +43,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   void addCoinAndCooldown() async {
     if (isLocked) return;
-
-    final ok = await WalletService.addPoint(1000);
-
+    await WalletService.addPoint(1000);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
@@ -65,12 +63,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
 
     setState(() {
-      isLocked = true;
-      cooldown = 5;
+      isLocked = false;
+      cooldown = 3;
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (cooldown > 1) {
+      if (cooldown >= 1) {
         setState(() => cooldown--);
       } else {
         timer.cancel();

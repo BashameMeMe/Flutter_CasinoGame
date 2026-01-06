@@ -12,25 +12,32 @@ class SlotMachineScreen extends StatefulWidget {
 class _SlotMachineScreenState extends State<SlotMachineScreen>
     with SingleTickerProviderStateMixin {
   final Random _random = Random();
-
-  final List<String> symbols = ['🍒', '🍋', '🔔', '⭐', '💎', '7️','🍅'];
-
-  List<String> reels = ['🍒', '🍋', '🔔'];
+  final List<String> symbols = ['🍒', '🍋', '🍊', '🔔', '⭐', '💎', '7️⃣', '🍉', 'BAR'];
+  List<String> reels = ['🍒', '🍒', '🍒'];
   bool spinning = false;
   int bet = 100;
 
   late AnimationController _spinController;
-  late Animation<double> _spinAnimation;
+  late Animation<double> _spinAnim1;
+  late Animation<double> _spinAnim2;
+  late Animation<double> _spinAnim3;
 
   @override
   void initState() {
     super.initState();
     _spinController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1800),
     );
-    _spinAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _spinController, curve: Curves.easeInOut),
+
+    _spinAnim1 = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _spinController, curve: const Interval(0.0, 1.0, curve: Curves.easeOutCubic)),
+    );
+    _spinAnim2 = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _spinController, curve: const Interval(0.1, 1.0, curve: Curves.easeOutCubic)),
+    );
+    _spinAnim3 = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _spinController, curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic)),
     );
   }
 
@@ -44,46 +51,56 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
     final ok = await WalletService.deductPoint(bet);
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("❌ Không đủ coin")),
+        SnackBar(
+          content: const Text("❌ Không đủ coin!", style: TextStyle(color: Colors.white)),
+          backgroundColor: Colors.redAccent.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
       );
       return;
     }
 
     setState(() => spinning = true);
-    _spinController.repeat(reverse: true);
 
-    // Hiệu ứng quay 3 cuộn với delay khác nhau
-    for (int step = 0; step < 20; step++) {
-      await Future.delayed(const Duration(milliseconds: 80));
+    _spinController.forward(from: 0.0);
+
+    // Hiệu ứng quay nhanh trước khi dừng dần
+    for (int i = 0; i < 25; i++) {
       if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 70));
       setState(() {
-        reels = List.generate(
-          3,
-          (_) => symbols[_random.nextInt(symbols.length)],
-        );
+        reels = List.generate(3, (_) => symbols[_random.nextInt(symbols.length)]);
       });
     }
 
-    _spinController.stop();
+    // Dừng từng cuộn một cách đẹp mắt
+    await Future.delayed(const Duration(milliseconds: 400));
+    setState(() => reels[0] = symbols[_random.nextInt(symbols.length)]);
 
-    // Kết quả cuối cùng
-    reels = List.generate(3, (_) => symbols[_random.nextInt(symbols.length)]);
+    await Future.delayed(const Duration(milliseconds: 300));
+    setState(() => reels[1] = symbols[_random.nextInt(symbols.length)]);
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    setState(() {
+      reels[2] = symbols[_random.nextInt(symbols.length)];
+      spinning = false;
+    });
+
+    _spinController.reset();
 
     checkResult();
-
-    if (mounted) {
-      setState(() => spinning = false);
-    }
   }
 
   void checkResult() async {
     int reward = 0;
 
     if (reels[0] == reels[1] && reels[1] == reels[2]) {
-      reward = reels[0] == '💎' ? bet * 20 : bet * 10;
-    } else if (reels[0] == reels[1] ||
-        reels[1] == reels[2] ||
-        reels[0] == reels[2]) {
+      // Jackpot
+      if (reels[0] == '💎') reward = bet * 25;
+      else if (reels[0] == '7️⃣') reward = bet * 15;
+      else reward = bet * 10;
+    } else if (reels[0] == reels[1] || reels[1] == reels[2] || reels[0] == reels[2]) {
       reward = bet * 2;
     }
 
@@ -91,57 +108,91 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
       await WalletService.addPoint(reward);
     }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(seconds: 4),
-          backgroundColor: reward > 0 ? Colors.green[700] : Colors.red[800],
-          content: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                reward > 0 ? Icons.casino_rounded : Icons.sentiment_dissatisfied,
-                color: Colors.white,
-                size: 28,
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.transparent,
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: reward > 0
+                  ? [Colors.green.shade600, Colors.green.shade900]
+                  : [Colors.red.shade700, Colors.red.shade900],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: (reward > 0 ? Colors.green : Colors.red).withOpacity(0.7),
+                blurRadius: 25,
+                spreadRadius: 5,
               ),
-              const SizedBox(width: 12),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               Text(
-                reward > 0 ? "JACKPOT! +$reward" : "Thua rồi!",
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                reward > 0 ? "🎰 JACKPOT! +$reward" : "😔 Thua rồi!",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
               ),
             ],
           ),
         ),
-      );
-    }
+      ),
+    );
   }
 
-  Widget reel(String symbol) {
-    return Container(
-      width: 100,
-      height: 140,
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.amber[600]!, width: 4),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.amber.withOpacity(0.3),
-            blurRadius: 20,
-            spreadRadius: 5,
+  Widget reel(String symbol, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, animation.value * 300 - 300), // Cuộn từ trên xuống
+          child: Container(
+            width: 110,
+            height: 160,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.black.withOpacity(0.85), Colors.grey.shade900],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.amber.shade600, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.amber.withOpacity(0.4),
+                  blurRadius: 25,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                symbol,
+                style: const TextStyle(
+                  fontSize: 80,
+                  fontWeight: FontWeight.w900,
+                  shadows: [
+                    Shadow(blurRadius: 15, color: Colors.black87),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          symbol,
-          style: const TextStyle(
-            fontSize: 60,
-            fontWeight: FontWeight.bold,
-            shadows: [Shadow(blurRadius: 8, color: Colors.black87)],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -151,29 +202,30 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
       onTap: spinning ? null : () => setState(() => bet = amount),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: selected
-                ? [Colors.amber[600]!, Colors.amber[300]!]
-                : [Colors.grey[800]!, Colors.grey[900]!],
+                ? [Colors.amber.shade500, Colors.orange.shade700]
+                : [Colors.grey.shade800, Colors.grey.shade900],
           ),
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(40),
           boxShadow: [
             BoxShadow(
               color: selected ? Colors.amber.withOpacity(0.6) : Colors.black.withOpacity(0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              blurRadius: 16,
+              spreadRadius: 3,
+              offset: const Offset(0, 8),
             ),
           ],
-          border: selected ? Border.all(color: Colors.white70, width: 2) : null,
+          border: selected ? Border.all(color: Colors.amberAccent, width: 2) : null,
         ),
         child: Text(
           "$amount",
           style: TextStyle(
-            color: selected ? Colors.black87 : Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+            color: selected ? Colors.black87 : Colors.white70,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),
@@ -184,131 +236,153 @@ class _SlotMachineScreenState extends State<SlotMachineScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
+      backgroundColor: const Color(0xFF0A0E1A),
       appBar: AppBar(
-        title: const Text("SLOT MACHINE VIP", style: TextStyle(letterSpacing: 2)),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Colors.amberAccent, Colors.orangeAccent, Colors.deepOrangeAccent],
+          ).createShader(bounds),
+          child: const Text(
+            "SLOT MACHINE VIP",
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              letterSpacing: 4,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF0F0F23),
-              Color(0xFF1A1A3A),
-              Color(0xFF2A1B4A),
-            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0A0E1A),
+              Color(0xFF141A2E),
+              Color(0xFF1E2640),
+              Color(0xFF2A1B4A),
+            ],
           ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
                 const SizedBox(height: 20),
 
-                // Tiêu đề casino
-                const Text(
-                  "🎰 SLOT MACHINE",
-                  style: TextStyle(
-                    color: Colors.amber,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 3,
-                    shadows: [
-                      Shadow(blurRadius: 10, color: Colors.black),
-                    ],
+                // Title with glow
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Colors.amberAccent, Colors.orangeAccent],
+                  ).createShader(bounds),
+                  child: const Text(
+                    "🎰 SLOT MACHINE",
+                    style: TextStyle(
+                      fontSize: 38,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 4,
+                      color: Colors.white,
+                      shadows: [Shadow(blurRadius: 15, color: Colors.black87)],
+                    ),
                   ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // 3 cuộn slot
-                AnimatedBuilder(
-                  animation: _spinController,
-                  builder: (context, child) {
-                    return Transform.rotate(
-                      angle: _spinAnimation.value * 0.1 * (spinning ? 1 : 0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-                        margin: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(color: Colors.amber[700]!, width: 6),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.amber.withOpacity(0.4),
-                              blurRadius: 40,
-                              spreadRadius: 10,
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: reels.map(reel).toList(),
-                        ),
-                      ),
-                    );
-                  },
                 ),
 
                 const SizedBox(height: 50),
 
-                // Chọn mức cược
+                // Reels container
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.black.withOpacity(0.9), Colors.grey.shade900.withOpacity(0.8)],
+                    ),
+                    borderRadius: BorderRadius.circular(40),
+                    border: Border.all(color: Colors.amber.shade700, width: 6),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.amber.withOpacity(0.4),
+                        blurRadius: 40,
+                        spreadRadius: 15,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      reel(reels[0], _spinAnim1),
+                      reel(reels[1], _spinAnim2),
+                      reel(reels[2], _spinAnim3),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 60),
+
+                // Bet selection
                 if (!spinning)
                   Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
+                    spacing: 20,
+                    runSpacing: 20,
                     alignment: WrapAlignment.center,
                     children: [100, 200, 500, 1000].map(betChip).toList(),
                   ),
 
                 if (spinning)
                   const Text(
-                    "ĐANG QUAY...",
+                    "ĐANG QUAY... CHỜ JACKPOT! 🎰",
                     style: TextStyle(
-                      color: Colors.amber,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      color: Colors.amberAccent,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
                       letterSpacing: 2,
+                      shadows: [Shadow(blurRadius: 10, color: Colors.black87)],
                     ),
                   ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 50),
 
-                // Nút SPIN
+                // Spin Button
                 GestureDetector(
                   onTap: spinning ? null : spin,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 90, vertical: 24),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFF1744), Color(0xFFD50000)],
+                      gradient: LinearGradient(
+                        colors: [Colors.red.shade600, Colors.red.shade900],
                       ),
-                      borderRadius: BorderRadius.circular(50),
+                      borderRadius: BorderRadius.circular(60),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.red.withOpacity(0.6),
+                          color: Colors.redAccent.withOpacity(0.7),
                           blurRadius: 30,
                           spreadRadius: 10,
                         ),
                       ],
+                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
                     ),
                     child: Text(
-                      spinning ? "QUAY..." : "SPIN",
+                      spinning ? "QUAY..." : "SPIN NOW!",
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 28,
+                        fontSize: 30,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 4,
-                        shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+                        letterSpacing: 5,
+                        shadows: [Shadow(blurRadius: 10, color: Colors.black87)],
                       ),
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 60),
               ],
             ),
           ),

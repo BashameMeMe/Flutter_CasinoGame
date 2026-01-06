@@ -9,21 +9,48 @@ class CoinFlipStreakScreen extends StatefulWidget {
   State<CoinFlipStreakScreen> createState() => _CoinFlipStreakScreenState();
 }
 
-class _CoinFlipStreakScreenState extends State<CoinFlipStreakScreen> {
+class _CoinFlipStreakScreenState extends State<CoinFlipStreakScreen> with SingleTickerProviderStateMixin {
   final Random _random = Random();
-
   bool? currentResult; // true = Heads, false = Tails
   bool playing = false;
   int bet = 0;
   double multiplier = 1.0;
 
+  late AnimationController _animController;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _glowAnim;
+  late Animation<double> _rotateAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+
+    _scaleAnim = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    );
+
+    _glowAnim = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    );
+
+    _rotateAnim = Tween<double>(begin: 0, end: 2 * pi).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    );
+  }
+
   Future<void> start(int amount) async {
     final ok = await WalletService.deductPoint(amount);
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("❌ Không đủ coin"),
-          backgroundColor: Colors.redAccent,
+        SnackBar(
+          content: const Text("❌ Không đủ coin!", style: TextStyle(color: Colors.white)),
+          backgroundColor: Colors.redAccent.shade700.withOpacity(0.9),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       );
       return;
@@ -33,8 +60,14 @@ class _CoinFlipStreakScreenState extends State<CoinFlipStreakScreen> {
       bet = amount;
       multiplier = 1.0;
       playing = true;
-      currentResult = _random.nextBool();
+      currentResult = null; // ẩn kết quả ban đầu
     });
+
+    // Delay để tạo cảm giác flip
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (mounted) {
+      setState(() => currentResult = _random.nextBool());
+    }
   }
 
   void flip(bool guessHeads) {
@@ -48,11 +81,20 @@ class _CoinFlipStreakScreenState extends State<CoinFlipStreakScreen> {
         multiplier = 1.0;
         currentResult = next;
       });
+      _animController.reset();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("💥 Thua – mất cược!"),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.close_rounded, color: Colors.white, size: 24),
+              SizedBox(width: 12),
+              Text("💥 THUA – MẤT CƯỢC!", style: TextStyle(color: Colors.white, fontSize: 18)),
+            ],
+          ),
+          backgroundColor: Colors.red.shade900.withOpacity(0.9),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
       );
       return;
@@ -60,8 +102,17 @@ class _CoinFlipStreakScreenState extends State<CoinFlipStreakScreen> {
 
     setState(() {
       currentResult = next;
-      multiplier += 0.90; // Giữ nguyên multiplier +0.90 như code của bạn
+      multiplier += 0.95; // tăng nhẹ để game hấp dẫn hơn
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 1, milliseconds: 500),
+        content: Text("✓ Chuỗi thắng! x${multiplier.toStringAsFixed(2)}", style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.green.shade700.withOpacity(0.8),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> cashOut() async {
@@ -72,70 +123,131 @@ class _CoinFlipStreakScreenState extends State<CoinFlipStreakScreen> {
       playing = false;
       bet = 0;
       multiplier = 1.0;
+      currentResult = null;
     });
+    _animController.reset();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         duration: const Duration(seconds: 4),
-        backgroundColor: Colors.green[700],
-        content: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.emoji_events, color: Colors.white, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              "🎉 Nhận $reward coin!",
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
             ),
-          ],
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(color: Colors.amberAccent.withOpacity(0.7), blurRadius: 25, spreadRadius: 5),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.emoji_events_rounded, color: Colors.black87, size: 36),
+              const SizedBox(width: 16),
+              Text(
+                "🎉 NHẬN $reward COIN!",
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
   Widget coinDisplay() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      width: 180,
-      height: 180,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: currentResult == null
-            ? Colors.grey[800]
-            : currentResult!
-                ? Colors.amber[400]
-                : Colors.grey[300],
-        boxShadow: [
-          BoxShadow(
-            color: currentResult == null
-                ? Colors.black.withOpacity(0.4)
-                : currentResult!
-                    ? Colors.amber.withOpacity(0.6)
-                    : Colors.grey.withOpacity(0.6),
-            blurRadius: 20,
-            spreadRadius: 5,
-          ),
-        ],
-        border: Border.all(color: Colors.white70, width: 4),
-      ),
-      child: Center(
-        child: Text(
-          currentResult == null
-              ? "?"
-              : currentResult!
-                  ? "HEADS"
-                  : "TAILS",
-          style: TextStyle(
-            fontSize: currentResult == null ? 80 : 38,
-            fontWeight: FontWeight.w900,
-            color: currentResult == null
-                ? Colors.white70
-                : currentResult!
-                    ? Colors.black87
-                    : Colors.black87,
-            shadows: const [Shadow(blurRadius: 10, color: Colors.black54)],
-          ),
-        ),
+    return ScaleTransition(
+      scale: _scaleAnim,
+      child: AnimatedBuilder(
+        animation: _glowAnim,
+        builder: (context, child) {
+          return Transform.rotate(
+            angle: playing ? _rotateAnim.value : 0,
+            child: Container(
+              width: 240,
+              height: 240,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: currentResult == null
+                      ? [Colors.grey.shade900, Colors.grey.shade800]
+                      : currentResult!
+                          ? [const Color(0xFFFFD700), const Color(0xFFDAA520)]
+                          : [const Color(0xFFAAAAAA), const Color(0xFF777777)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (currentResult == null
+                            ? Colors.cyanAccent
+                            : currentResult!
+                                ? Colors.amberAccent
+                                : Colors.blueGrey)
+                        .withOpacity(_glowAnim.value * 0.8),
+                    blurRadius: 50,
+                    spreadRadius: 15,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.7),
+                    blurRadius: 30,
+                    offset: const Offset(0, 20),
+                  ),
+                ],
+                border: Border.all(color: Colors.white.withOpacity(0.35), width: 4),
+              ),
+              child: Center(
+                child: currentResult == null
+                    ? const Text(
+                        "?",
+                        style: TextStyle(
+                          fontSize: 140,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white70,
+                          shadows: [Shadow(blurRadius: 30, color: Colors.black87)],
+                        ),
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            currentResult! ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                            size: 80,
+                            color: Colors.black87,
+                            shadows: const [Shadow(blurRadius: 20, color: Colors.black54)],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            currentResult! ? "HEADS" : "TAILS",
+                            style: const TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.black87,
+                              letterSpacing: 3,
+                              shadows: [Shadow(blurRadius: 15, color: Colors.black87)],
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -143,27 +255,30 @@ class _CoinFlipStreakScreenState extends State<CoinFlipStreakScreen> {
   Widget betChip(int amount) {
     return GestureDetector(
       onTap: playing ? null : () => start(amount),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFFFC107), Color(0xFFFFA000)],
+            colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
           ),
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(50),
           boxShadow: [
             BoxShadow(
-              color: Colors.amber.withOpacity(0.5),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              color: Colors.amberAccent.withOpacity(0.7),
+              blurRadius: 20,
+              spreadRadius: 4,
             ),
           ],
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
         ),
         child: Text(
           "$amount",
           style: const TextStyle(
             color: Colors.black87,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
           ),
         ),
       ),
@@ -175,64 +290,66 @@ class _CoinFlipStreakScreenState extends State<CoinFlipStreakScreen> {
     final potential = (bet * multiplier).round();
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: const Color(0xFF0A0E17),
       appBar: AppBar(
-        title: const Text("COIN FLIP STREAK", style: TextStyle(letterSpacing: 1.5)),
-        backgroundColor: Colors.black.withOpacity(0.3), // Nền mờ để hòa quyện gradient
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        title: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Colors.cyanAccent, Colors.purpleAccent, Colors.amberAccent],
+          ).createShader(bounds),
+          child: const Text(
+            "COIN FLIP STREAK",
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 3,
+              color: Colors.white,
+            ),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context); // Nút quay trở lại
-          },
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0F2027), Color(0xFF1B263B), Color(0xFF415A77)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
+            colors: [Color(0xFF0A001A), Color(0xFF140033), Color(0xFF1A003F)],
           ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-
                   coinDisplay(),
+                  const SizedBox(height: 40),
 
-                  const SizedBox(height: 30),
-
+                  // Stats glass card
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(30),
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
+                      boxShadow: [
+                        BoxShadow(color: Colors.cyanAccent.withOpacity(0.25), blurRadius: 25, spreadRadius: 2),
+                      ],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Column(
-                          children: [
-                            const Text("CƯỢC", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            Text("$bet", style: const TextStyle(color: Colors.amber, fontSize: 20, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            const Text("HỆ SỐ", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            Text("x${multiplier.toStringAsFixed(2)}", style: const TextStyle(color: Colors.greenAccent, fontSize: 20, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            const Text("TẠM TÍNH", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            Text("$potential", style: const TextStyle(color: Colors.cyanAccent, fontSize: 20, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
+                        _buildStatItem("CƯỢC", "$bet", Colors.amberAccent),
+                        _buildStatItem("HỆ SỐ", "x${multiplier.toStringAsFixed(2)}", Colors.greenAccent),
+                        _buildStatItem("TỔNG", "$potential", Colors.cyanAccent),
                       ],
                     ),
                   ),
@@ -241,82 +358,113 @@ class _CoinFlipStreakScreenState extends State<CoinFlipStreakScreen> {
 
                   if (!playing)
                     Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
+                      spacing: 24,
+                      runSpacing: 24,
                       alignment: WrapAlignment.center,
                       children: [100, 200, 500, 1000].map(betChip).toList(),
                     ),
 
                   if (playing) ...[
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 40),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        ElevatedButton(
-                          onPressed: () => flip(true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueGrey[800],
-                            padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 18),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            elevation: 8,
-                          ),
-                          child: const Text(
-                            "HEADS",
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => flip(false),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueGrey[800],
-                            padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 18),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            elevation: 8,
-                          ),
-                          child: const Text(
-                            "TAILS",
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                        ),
+                        _buildChoiceButton(true, "HEADS", Icons.arrow_upward_rounded, Colors.cyanAccent),
+                        _buildChoiceButton(false, "TAILS", Icons.arrow_downward_rounded, Colors.purpleAccent),
                       ],
                     ),
+                    const SizedBox(height: 50),
 
-                    const SizedBox(height: 30),
-
-                    ElevatedButton(
-                      onPressed: cashOut,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        elevation: 10,
-                        shadowColor: Colors.amber.withOpacity(0.6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-                        padding: EdgeInsets.zero,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 18),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFFC107), Color(0xFFFFA000)],
+                    // CASH OUT - điểm nhấn chính
+                    ScaleTransition(
+                      scale: _scaleAnim,
+                      child: GestureDetector(
+                        onTap: cashOut,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 24),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF00FF9D), Color(0xFF00D4FF), Color(0xFF7B00FF)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(60),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.cyanAccent.withOpacity(_glowAnim.value * 0.8),
+                                blurRadius: 40,
+                                spreadRadius: 10,
+                              ),
+                              BoxShadow(
+                                color: Colors.purpleAccent.withOpacity(0.6),
+                                blurRadius: 60,
+                                spreadRadius: 15,
+                              ),
+                            ],
                           ),
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: const Text(
-                          "💰 CASH OUT",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                          child: const Text(
+                            "💰 CASH OUT",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 4,
+                              shadows: [Shadow(blurRadius: 15, color: Colors.black54)],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ],
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 14)),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(color: color, fontSize: 28, fontWeight: FontWeight.w900),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChoiceButton(bool isHeads, String text, IconData icon, Color glowColor) {
+    return GestureDetector(
+      onTap: () => flip(isHeads),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isHeads ? [Colors.blueAccent.shade700, Colors.cyan.shade900] : [Colors.purple.shade800, Colors.deepPurple.shade900],
+          ),
+          borderRadius: BorderRadius.circular(40),
+          boxShadow: [
+            BoxShadow(color: glowColor.withOpacity(0.6), blurRadius: 20, spreadRadius: 5),
+          ],
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 32, color: Colors.white),
+            const SizedBox(width: 12),
+            Text(
+              text,
+              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+            ),
+          ],
         ),
       ),
     );

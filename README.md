@@ -45,10 +45,11 @@ Chơi giải trí – không tiền thật.
 ## 🚀 Cài đặt thủ công (dành cho dev)
 
 ```bash
-git clone https://github.com/USERNAME/REPO.git
+git clone https://github.com/myproject/REPO.git
 cd flutter_casino_game
 flutter pub get
 flutter run
+
 
 
 

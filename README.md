@@ -1,26 +1,49 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-# flutter_application_1
+# 🎰 Flutter Casino Mini Game
 
-A new Flutter project.
+Ứng dụng casino mini game viết bằng **Flutter + Firebase**  
+Chơi giải trí – không tiền thật.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 📱 Tải ứng dụng Android (APK)
 
-A few resources to get you started if this is your first Flutter project:
+👉 **Nhấn vào nút dưới đây để tải và cài đặt APK**
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+[⬇️ DOWNLOAD APK](https://github.com/USERNAME/REPO/releases/download/v1.0.0/casino_game_v1.0.0.apk)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-=======
-# Flutter_CasinoGame
->>>>>>> 76e05c124cfadcdf4d12b73b263ba037f9a2062d
-=======
-# Flutter Casino Game
+> ⚠️ Android sẽ hỏi cho phép cài ứng dụng từ nguồn không xác định → bật cho phép là cài được.
 
-Ứng dụng game Flutter: Xóc Đĩa, Tài Xỉu, Higher Lower
->>>>>>> 7e5f2ada17f3074540ce4ad655a826099888bbb8
+---
+
+## 🎮 Tính năng
+
+- 🔐 Đăng nhập / Đăng ký (Firebase Auth)
+- 💰 Ví coin lưu Firebase
+- 🎲 Mini games:
+  - Slot Machine
+  - Roulette (36 số châu Âu)
+  - Blackjack
+  - Coin Flip
+  - Dice Roll
+  - Rock Paper Scissors
+- 🎁 Coin free nhỏ (demo)
+- 🎨 UI casino hiện đại
+
+---
+
+## 🛠 Công nghệ
+
+- Flutter
+- Firebase Auth
+- Cloud Firestore
+- Android APK
+
+---
+
+## 🚀 Cài đặt thủ công (dành cho dev)
+
+```bash
+git clone https://github.com/USERNAME/REPO.git
+cd flutter_casino_game
+flutter pub get
+flutter run

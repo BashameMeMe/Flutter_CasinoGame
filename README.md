@@ -10,6 +10,7 @@ Chơi giải trí – không tiền thật.
 👉 **Nhấn vào nút dưới đây để tải và cài đặt APK**
 
 [⬇️ DOWNLOAD APK](https://github.com/USERNAME/REPO/releases/download/v1.0.0/casino_game_v1.0.0.apk)
+![Uploading QR.png…]()
 
 > ⚠️ Android sẽ hỏi cho phép cài ứng dụng từ nguồn không xác định → bật cho phép là cài được.
 
@@ -47,3 +48,4 @@ git clone https://github.com/USERNAME/REPO.git
 cd flutter_casino_game
 flutter pub get
 flutter run
+
